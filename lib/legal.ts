@@ -5,9 +5,9 @@ export const legalPages: Record<string, { title: string; eyebrow: string; intro:
     title: 'Política de privacidade', eyebrow: 'MINUTA CONFIGURÁVEL · LGPD',
     intro: 'Esta página descreve a estrutura de tratamento de dados do MenteX. Antes da operação comercial, os campos destacados devem ser revisados e preenchidos pela empresa responsável.',
     sections: [
-      { heading: 'Dados utilizados', body: 'O teste usa um identificador anônimo de sessão, respostas, tempo por desafio, resultado calculado, estado do pagamento e dados técnicos mínimos de segurança. Não exigimos nome, e-mail ou criação de conta para realizar o teste.' },
-      { heading: 'Finalidades', body: 'Os dados são utilizados para manter a sessão, calcular o resultado, validar o desbloqueio, prevenir abuso e permitir a recuperação temporária no mesmo dispositivo. Analytics e publicidade só devem ser ativados mediante consentimento e com IDs reais configurados.' },
-      { heading: 'Compartilhamento e retenção', body: `Dados de pagamento são processados pelo provedor configurado; o MenteX não armazena dados de cartão. A configuração inicial prevê retenção do resultado por ${siteConfig.resultRetentionDays} dias. Prazos finais, operadores e transferências internacionais devem ser informados pela empresa responsável.` },
+      { heading: 'Dados utilizados', body: 'O teste usa um identificador anônimo de sessão, respostas, tempo por desafio, resultado calculado e dados técnicos mínimos de segurança. Não exigimos nome, e-mail ou criação de conta para realizar o teste.' },
+      { heading: 'Finalidades', body: 'Os dados são utilizados para calcular o resultado, validar o desbloqueio e prevenir abuso. O MenteX não mantém banco próprio de sessões ou resultados: a cápsula de resultado criptografada fica temporariamente neste dispositivo. Analytics e publicidade só devem ser ativados mediante consentimento e com IDs reais configurados.' },
+      { heading: 'Compartilhamento e retenção', body: `Dados de pagamento são processados pelo Mercado Pago, que mantém os registros financeiros da transação; o MenteX não armazena dados de cartão. A cápsula expira após ${siteConfig.resultRetentionDays} dias. Limpar os dados do navegador pode impedir a recuperação, e o resultado não pode ser recuperado em outro dispositivo sem a cápsula.` },
       { heading: 'Direitos e contato', body: `O titular poderá solicitar confirmação, acesso, correção, eliminação e informações sobre o tratamento, conforme aplicável. Canal do encarregado ou responsável: ${siteConfig.supportEmail}.` },
     ],
   },
@@ -28,7 +28,7 @@ export const legalPages: Record<string, { title: string; eyebrow: string; intro:
       { heading: 'Cobrança', body: `O valor configurado é ${siteConfig.priceLabel}, exibido antes do início do checkout. Pix e cartão podem ser disponibilizados pelo provedor escolhido. Enquanto o site estiver em modo de demonstração, nenhuma cobrança real será realizada.` },
       { heading: 'Confirmação', body: 'A liberação ocorre somente após confirmação do provedor recebida e validada no servidor. Estados pendente, recusado e cancelado não liberam o relatório.' },
       { heading: 'Solicitação de reembolso', body: `Pedidos devem ser enviados para ${siteConfig.supportEmail}, com as informações mínimas que permitam localizar a transação. Prazos, hipóteses e procedimento final devem ser revisados para a operação, o produto digital e a legislação aplicável.` },
-      { heading: 'Falhas de acesso', body: 'Se o pagamento for aprovado e o resultado não abrir, não refaça a compra. Procure o suporte para recuperação ou análise do reembolso.' },
+      { heading: 'Falhas de acesso', body: 'Se o pagamento for aprovado e o resultado não abrir, não refaça a compra. A recuperação depende da cápsula temporária mantida no mesmo dispositivo; se ela for apagada, procure o suporte para análise do reembolso.' },
     ],
   },
   'aviso-recreativo': {

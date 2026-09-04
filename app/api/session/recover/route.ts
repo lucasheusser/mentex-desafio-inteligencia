@@ -1,12 +1,15 @@
-import { env } from 'cloudflare:workers';
+import { openCapsule, paymentMode, verifyDemoReceipt, verifyMercadoPagoPayment } from '@/lib/server/state';
 
 export async function POST(request: Request) {
-  const { sessionId, accessToken } = (await request.json()) as { sessionId?: string; accessToken?: string };
-  if (!sessionId || !accessToken) return Response.json({ recovered: false }, { status: 400 });
-  const session = await env.DB.prepare(
-    `SELECT access_token, expires_at, payment_status
-     FROM challenge_sessions WHERE id = ? AND access_token = ?`,
-  ).bind(sessionId, accessToken).first<{ access_token: string; expires_at: number; payment_status: string }>();
-  const recovered = Boolean(session && session.expires_at > Date.now() && session.payment_status === 'approved');
-  return Response.json({ recovered, accessToken: recovered ? accessToken : null });
+  const body = await request.json() as { capsule?: unknown; paymentId?: unknown };
+  const capsule = await openCapsule(body.capsule);
+  if (!capsule) return Response.json({ recovered: false }, { status: 400 });
+  const mode = paymentMode();
+  if (mode === 'demo') {
+    const recovered = verifyDemoReceipt(body.paymentId, capsule.id);
+    return Response.json({ recovered, paymentStatus: recovered ? 'approved' : 'unavailable' });
+  }
+  if (mode !== 'live') return Response.json({ recovered: false, paymentStatus: 'unavailable' }, { status: 503 });
+  const payment = await verifyMercadoPagoPayment(body.paymentId, capsule.id);
+  return Response.json({ recovered: payment.valid, paymentStatus: payment.status ?? 'unavailable' });
 }

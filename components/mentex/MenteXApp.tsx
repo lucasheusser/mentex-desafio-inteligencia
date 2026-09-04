@@ -26,7 +26,7 @@ declare global {
         description: string;
         inputSchema: Record<string, unknown>;
         annotations?: { readOnlyHint?: boolean; untrustedContentHint?: boolean };
-        execute: (input: unknown) => unknown | Promise<unknown>;
+        execute: (input: unknown) => unknown;
       }, options?: { signal?: AbortSignal }) => void | Promise<void>;
     };
   }
@@ -35,6 +35,9 @@ declare global {
 export function MenteXApp() {
   const [view, setView] = useState<View>('landing');
   const [sessionId, setSessionId] = useState('');
+  const [sessionToken, setSessionToken] = useState('');
+  const [capsule, setCapsule] = useState('');
+  const [paymentMode, setPaymentMode] = useState<'demo' | 'live'>('demo');
   const [questions, setQuestions] = useState<PublicQuestion[]>([]);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [result, setResult] = useState<ResultProfile | null>(null);
@@ -47,9 +50,11 @@ export function MenteXApp() {
     setError('');
     try {
       const response = await fetch('/api/session', { method: 'POST' });
-      const data = await response.json() as { sessionId?: string; questions?: PublicQuestion[]; error?: string };
-      if (!response.ok || !data.sessionId || !data.questions) throw new Error(data.error ?? 'Não foi possível preparar o desafio.');
+      const data = await response.json() as { sessionId?: string; sessionToken?: string; questions?: PublicQuestion[]; paymentMode?: 'demo' | 'live'; error?: string };
+      if (!response.ok || !data.sessionId || !data.sessionToken || !data.questions) throw new Error(data.error ?? 'Não foi possível preparar o desafio.');
       setSessionId(data.sessionId);
+      setSessionToken(data.sessionToken);
+      setPaymentMode(data.paymentMode ?? 'demo');
       setQuestions(data.questions);
       setView('quiz');
       localStorage.setItem('mentex_session_id', data.sessionId);
@@ -68,13 +73,15 @@ export function MenteXApp() {
     const started = Date.now();
     try {
       const response = await fetch(`/api/session/${sessionId}/complete`, {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ answers }),
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionToken, answers }),
       });
-      const data = await response.json() as { preview?: Preview; error?: string };
-      if (!response.ok || !data.preview) throw new Error(data.error ?? 'Não foi possível calcular o resultado.');
+      const data = await response.json() as { preview?: Preview; capsule?: string; error?: string };
+      if (!response.ok || !data.preview || !data.capsule) throw new Error(data.error ?? 'Não foi possível calcular o resultado.');
       const remaining = Math.max(0, 2300 - (Date.now() - started));
       await new Promise((resolve) => window.setTimeout(resolve, remaining));
       setPreview(data.preview);
+      setCapsule(data.capsule);
+      localStorage.setItem('mentex_result_capsule', data.capsule);
       setView('preview');
       trackEvent('challenge_completed');
       trackEvent('paywall_viewed');
@@ -84,20 +91,23 @@ export function MenteXApp() {
     }
   };
 
-  const unlock = async (accessToken: string) => {
-    const response = await fetch(`/api/result/${accessToken}`);
+  const unlock = async (paymentId: string, capsuleValue = capsule) => {
+    const response = await fetch('/api/result', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ capsule: capsuleValue, paymentId }),
+    });
     const data = await response.json() as { result?: ResultProfile; error?: string };
     if (!response.ok || !data.result) throw new Error(data.error ?? 'Não foi possível liberar o relatório.');
-    localStorage.setItem('mentex_access_token', accessToken);
+    localStorage.setItem('mentex_payment_id', paymentId);
     setResult(data.result);
     setView('result');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const restart = () => {
-    setSessionId(''); setQuestions([]); setPreview(null); setResult(null); setError(''); setView('landing');
+    setSessionId(''); setSessionToken(''); setCapsule(''); setQuestions([]); setPreview(null); setResult(null); setError(''); setView('landing');
     localStorage.removeItem('mentex_session_id');
-    localStorage.removeItem('mentex_access_token');
+    localStorage.removeItem('mentex_result_capsule');
+    localStorage.removeItem('mentex_payment_id');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -108,15 +118,33 @@ export function MenteXApp() {
   useEffect(() => {
     trackEvent('landing_viewed');
     const storedSessionId = localStorage.getItem('mentex_session_id');
-    const accessToken = localStorage.getItem('mentex_access_token');
-    if (!storedSessionId || !accessToken) return;
-    void fetch('/api/session/recover', {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId: storedSessionId, accessToken }),
-    }).then((response) => response.json()).then(async (data: { recovered?: boolean }) => {
-      if (!data.recovered) return;
-      setSessionId(storedSessionId);
-      await unlock(accessToken);
-    }).catch(() => undefined);
+    const storedCapsule = localStorage.getItem('mentex_result_capsule');
+    const paymentId = new URLSearchParams(window.location.search).get('payment_id') ?? localStorage.getItem('mentex_payment_id');
+    if (!storedSessionId || !storedCapsule || !paymentId) return;
+    let cancelled = false;
+    let attempts = 0;
+    const recover = async () => {
+      const response = await fetch('/api/session/recover', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ capsule: storedCapsule, paymentId }),
+      });
+      const data = await response.json() as { recovered?: boolean; paymentStatus?: string };
+      if (cancelled) return;
+      if (data.recovered) {
+        setSessionId(storedSessionId);
+        setCapsule(storedCapsule);
+        await unlock(paymentId, storedCapsule);
+        return;
+      }
+      if ((data.paymentStatus === 'pending' || data.paymentStatus === 'in_process') && attempts < 20) {
+        attempts += 1;
+        setError('Pagamento pendente. Verificando a confirmação...');
+        window.setTimeout(() => void recover().catch(() => undefined), 10_000);
+      } else if (data.paymentStatus === 'pending' || data.paymentStatus === 'in_process') {
+        setError('Limite de consultas atingido. Atualize a página mais tarde para verificar o pagamento.');
+      }
+    };
+    void recover().catch(() => setError('Falha temporária ao consultar o pagamento.'));
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -158,7 +186,7 @@ export function MenteXApp() {
       {view === 'landing' && <Landing onStart={startChallenge} loading={loading} />}
       {view === 'quiz' && <QuizExperience questions={questions} onFinish={finishChallenge} onExit={restart} />}
       {view === 'processing' && <Processing />}
-      {view === 'preview' && preview && <ResultPreview sessionId={sessionId} preview={preview} onUnlock={unlock} onRestart={restart} />}
+      {view === 'preview' && preview && capsule && <ResultPreview sessionId={sessionId} capsule={capsule} paymentMode={paymentMode} preview={preview} onUnlock={unlock} onRestart={restart} />}
       {view === 'result' && result && <UnlockedResult result={result} onRestart={restart} />}
       <ConsentBanner />
     </main>
