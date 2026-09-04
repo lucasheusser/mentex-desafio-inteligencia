@@ -7,7 +7,7 @@ export const siteConfig = {
   paymentProvider: 'Mercado Pago',
   companyName: 'CONFIGURAR_EMPRESA_RESPONSAVEL',
   companyDocument: 'CONFIGURAR_CNPJ_OU_CPF',
-  supportEmail: 'CONFIGURAR_EMAIL_DE_SUPORTE',
+  supportEmail: 'suporte.mentex@gmail.com',
   resultRetentionDays: 30,
   paymentMode: 'demo' as 'demo' | 'live',
   analytics: {

@@ -44,7 +44,7 @@ export const legalPages: Record<string, { title: string; eyebrow: string; intro:
     title: 'Contato e suporte', eyebrow: 'AJUDA COM ACESSO OU PAGAMENTO',
     intro: 'Use este canal para dúvidas, recuperação de resultado, privacidade e solicitações relacionadas ao pagamento.',
     sections: [
-      { heading: 'Canal principal', body: `E-mail: ${siteConfig.supportEmail}. O endereço deve ser substituído por um canal monitorado antes do lançamento.` },
+      { heading: 'Canal principal', body: `E-mail: ${siteConfig.supportEmail}.` },
       { heading: 'Para agilizar', body: 'Informe o horário aproximado do teste, o método de pagamento e o identificador da transação, quando disponível. Nunca envie número completo do cartão, senha ou código de segurança.' },
       { heading: 'Prazo de resposta', body: 'CONFIGURAR_PRAZO_REAL_DE_ATENDIMENTO antes da publicação comercial.' },
     ],

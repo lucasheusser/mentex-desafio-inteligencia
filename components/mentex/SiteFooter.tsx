@@ -8,6 +8,7 @@ export function SiteFooter() {
       <p>Uma experiência recreativa de lógica, memória e percepção. Não é avaliação psicológica, diagnóstico ou teste clínico de QI.</p>
       <nav aria-label="Links legais">
         {legalLinks.map((link) => <a key={link.href} href={link.href}>{link.label}</a>)}
+        <a href={`mailto:${siteConfig.supportEmail}`}>{siteConfig.supportEmail}</a>
         <ConsentPreferences />
       </nav>
       <small>© {new Date().getFullYear()} {siteConfig.companyName}. Dados empresariais configuráveis antes da publicação comercial.</small>
